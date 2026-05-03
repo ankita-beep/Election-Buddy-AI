@@ -49,7 +49,7 @@ NEWS_FEEDS = [
 _news_cache: dict = {"headlines": [], "fetched_at": None}
 
 
-def fetch_live_news(max_items: int = 6) -> list:
+def fetch_live_news(max_items: int = 10) -> list:
     global _news_cache
     now = datetime.now(timezone.utc)
     if (
@@ -60,6 +60,8 @@ def fetch_live_news(max_items: int = 6) -> list:
         return _news_cache["headlines"]
 
     headlines = []
+    keywords = ["election", "vote", "government", "minister", "party", "bjp", "congress", "politics", "poll"]
+    
     for source, url in NEWS_FEEDS:
         try:
             with httpx.Client(timeout=5.0) as client:
@@ -67,18 +69,31 @@ def fetch_live_news(max_items: int = 6) -> list:
             if resp.status_code != 200:
                 continue
             root = ET.fromstring(resp.text)
-            for item in root.findall(".//item/title")[:3]:
-                title = (item.text or "").strip()
-                if title and len(title) > 10:
-                    headlines.append(f"[{source}] {title}")
+            for item in root.findall(".//item"):
+                title = (item.findtext("title") or "").strip()
+                desc = (item.findtext("description") or "").strip()
+                link = (item.findtext("link") or "").strip()
+                pub_date = (item.findtext("pubDate") or "").strip()
+                
+                # Filter for political content
+                content_text = (title + " " + desc).lower()
+                if any(k in content_text for k in keywords):
+                    headlines.append({
+                        "title": title,
+                        "description": desc[:200] + "..." if len(desc) > 200 else desc,
+                        "link": link,
+                        "source": source,
+                        "published": pub_date
+                    })
         except Exception as e:
             logger.warning(f"News fetch failed ({source}): {e}")
-        if len(headlines) >= max_items:
+        if len(headlines) >= 20:
             break
 
     if headlines:
-        _news_cache = {"headlines": headlines[:max_items], "fetched_at": now}
-        logger.info(f"Fetched {len(headlines)} live headlines")
+        # Sort by latest if possible (simplified)
+        _news_cache = {"headlines": headlines, "fetched_at": now}
+        logger.info(f"Fetched {len(headlines)} structured headlines")
     return _news_cache["headlines"]
 
 
@@ -87,9 +102,9 @@ def get_system_prompt() -> str:
     now = datetime.now(timezone.utc)
     current_date = now.strftime("%A, %d %B %Y")
     current_year = now.year
-    headlines = fetch_live_news()
+    headlines = fetch_live_news(6)
     news_section = (
-        "## LIVE NEWS HEADLINES (Today)\n" + "\n".join(f"- {h}" for h in headlines)
+        "## LIVE NEWS HEADLINES (Today)\n" + "\n".join(f"- {h['title']}" for h in headlines)
         if headlines
         else "## LIVE NEWS\n- Headlines unavailable right now."
     )
@@ -205,6 +220,43 @@ def health():
         "live_headlines": len(_news_cache["headlines"]),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     })
+
+
+@app.route("/civic/data", methods=["GET"])
+def get_civic_data():
+    news = fetch_live_news()
+    return jsonify({"news": news})
+
+
+@app.route("/civic/summary", methods=["POST"])
+def get_civic_summary():
+    if not GROQ_API_KEY:
+        return jsonify({"detail": "API Key missing"}), 503
+    
+    news = fetch_live_news(10)
+    if not news:
+        return jsonify({"summary": "No recent election intelligence available."})
+    
+    titles = "\n".join([f"- {n['title']}" for n in news])
+    prompt = f"Provide a concise 3-line intelligence briefing on the latest Indian election news based on these headlines:\n{titles}\nFocus on key trends and major movements. Be professional."
+
+    try:
+        with httpx.Client(timeout=20.0) as client:
+            resp = client.post(
+                GROQ_URL,
+                headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
+                json={
+                    "model": MODEL,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": 150,
+                    "temperature": 0.5
+                }
+            )
+        res = resp.json()
+        summary = res["choices"][0]["message"]["content"].strip()
+        return jsonify({"summary": summary})
+    except Exception as e:
+        return jsonify({"detail": str(e)}), 500
 
 
 @app.route("/sessions", methods=["GET"])

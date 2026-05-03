@@ -5,22 +5,32 @@
 @layer base {
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 
-  :root {
-    --background: #000000;
-    --surface: #0a0a0a;
-    --primary: #ffffff;
-    --secondary: #262626;
-    --accent: #ffffff;
-    --slate-400: #737373;
-    --slate-300: #d4d4d4;
+  :root[data-theme='dark'] {
+    --bg: #0b0f14;
+    --card: rgba(255, 255, 255, 0.05);
+    --text: #ffffff;
+    --border: rgba(255,255,255,0.1);
+    --glass: rgba(255,255,255,0.05);
+  }
+
+  :root[data-theme='light'] {
+    --bg: #f4f6f8;
+    --card: rgba(255, 255, 255, 0.8);
+    --text: #111111;
+    --border: rgba(0,0,0,0.1);
+    --glass: rgba(255,255,255,0.6);
   }
 
   body {
-    background-color: var(--background);
-    color: #e5e5e5;
+    background: var(--bg);
+    color: var(--text);
     font-family: 'Plus Jakarta Sans', sans-serif;
     overflow-x: hidden;
     scroll-behavior: smooth;
+  }
+
+  * {
+    transition: background 0.25s ease, color 0.25s ease, border 0.25s ease;
   }
 
   h1, h2, h3, h4, .font-space {
@@ -30,21 +40,26 @@
 
 .grid-bg {
   background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-  mask-image: radial-gradient(circle at center, black, transparent 95%);
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 50px 50px;
 }
 
-.glass-panel {
-  backdrop-filter: blur(20px) saturate(150%);
-  background: rgba(10, 10, 10, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+.glass-card {
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
 }
 
-.neon-border-white {
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
+:root[data-theme="light"] .glass-card {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.glass-card:hover {
+  border-color: var(--border);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
 }
 
 .status-pulse {
@@ -62,6 +77,42 @@
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.03); border-radius: 10px; transition: background 0.3s; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.1); }
+
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.cursor-blink {
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes move-bg {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animated-bg {
+  /* Using variables for dynamic animated background is tricky, 
+     falling back to the required gradient per theme via standard CSS */
+  background: radial-gradient(circle at top, #0b0f14, #05070a);
+}
+
+:root[data-theme="light"] .animated-bg {
+  background: linear-gradient(180deg, #f4f6f8, #e9edf2);
+}
 
 .markdown-content h2, .markdown-content h3 {
   @apply font-space text-white mt-5 mb-3 text-[13px] font-bold uppercase tracking-[0.2em] border-l-2 border-white/20 pl-3;
