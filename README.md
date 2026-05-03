@@ -1,194 +1,117 @@
-# 🗳️ Election Buddy AI
+# 🗳️ Election Buddy AI — Production Ready
 
-> An AI-powered assistant that helps users understand India's election process — beginner-friendly, structured, and interactive.
-
-![Stack](https://img.shields.io/badge/Backend-FastAPI-009688?style=flat&logo=fastapi)
-![Stack](https://img.shields.io/badge/AI-OpenAI%20GPT--4o--mini-412991?style=flat&logo=openai)
-![Stack](https://img.shields.io/badge/Frontend-HTML%2FCSS%2FJS-F7DF1E?style=flat&logo=javascript)
+> A high-performance, AI-powered election assistant for India. Built for hackathons, designed for production.
 
 ---
 
-## ✨ Features
+## 🏗️ Deployment Architecture
 
-- 🧠 **AI Agent** powered by GPT-4o-mini with custom system prompt
-- 💬 **Conversation Memory** — maintains chat context per session
-- 🎨 **Premium Dark UI** — glassmorphism, gradient animations, particle effects
-- 📱 **Fully Responsive** — works on mobile and desktop
-- ⚡ **Quick Action Buttons** — one-click starter questions
-- 🔐 **Secure** — API key never exposed to frontend
-- 📋 **Structured Responses** — headings, bullets, step-by-step
+This application is decoupled for maximum scalability and zero-cost hosting:
+
+1.  **Backend (Python/Flask)**
+    *   **Host:** Render
+    *   **AI:** Groq (Llama 3.3 70B — Ultra Fast & Free)
+    *   **Features:** Session management, RSS live news integration, CORS enabled.
+
+2.  **Frontend (React/Vite)**
+    *   **Host:** Netlify
+    *   **UI:** Glassmorphism, Framer Motion animations, Lucide icons.
+    *   **Communication:** Axios with environment-based API URL.
 
 ---
 
-## 📦 Project Structure
+## 📂 Project Structure
 
 ```
 AI-election-agent/
 ├── backend/
-│   └── main.py          # FastAPI server + OpenAI agent
+│   ├── main.py          # Flask API server
+│   ├── requirements.txt  # Python dependencies (includes Gunicorn)
+│   └── .env.example     # Template for GROQ_API_KEY
 ├── frontend/
-│   ├── index.html       # Chat UI
-│   ├── style.css        # Design system
-│   └── script.js        # Frontend logic
-├── .env                 # API keys (never commit!)
-├── .env.example         # Template
-├── requirements.txt     # Python dependencies
+│   ├── src/             # React source code
+│   ├── public/          # Static assets
+│   ├── package.json     # Node dependencies
+│   └── .env.example     # Template for VITE_API_BASE_URL
 └── README.md
 ```
 
 ---
 
-## 🚀 Local Setup
+## 🚀 Deployment Guide
 
-### 1. Clone & Enter
+### 1. Backend (Render)
+1. Push your code to GitHub.
+2. Create a new **Web Service** on [Render](https://render.com).
+3. Connect your repository.
+4. Settings:
+   - **Root Directory:** `backend`
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `gunicorn main:app`
+5. **Environment Variables:**
+   - `GROQ_API_KEY`: Your key from [console.groq.com](https://console.groq.com).
+   - `PYTHON_VERSION`: `3.10` or higher.
 
-```bash
-git clone <your-repo-url>
-cd AI-election-agent
-```
-
-### 2. Create Virtual Environment
-
-```bash
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# Mac/Linux
-source venv/bin/activate
-```
-
-### 3. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Configure Environment
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
-```
-OPENAI_API_KEY=sk-your-actual-key-here
-OPENAI_MODEL=gpt-4o-mini
-MAX_TOKENS=1024
-PORT=8000
-```
-
-### 5. Run the Server
-
-```bash
-cd backend
-python main.py
-```
-
-Open your browser: **http://localhost:8000**
+### 2. Frontend (Netlify)
+1. Create a new site on [Netlify](https://netlify.com) from GitHub.
+2. Settings:
+   - **Base directory:** `frontend`
+   - **Build command:** `npm run build`
+   - **Publish directory:** `frontend/dist`
+3. **Environment Variables:**
+   - `VITE_API_BASE_URL`: The URL of your backend on Render (e.g., `https://election-buddy-api.onrender.com`).
 
 ---
 
-## 🌐 API Reference
+## 🛠️ Local Development
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET`  | `/`             | Serves frontend |
-| `GET`  | `/health`       | Health check |
-| `POST` | `/chat`         | Send a message |
-| `DELETE` | `/session/{id}` | Clear session |
-| `GET`  | `/api/docs`     | Swagger UI |
+### Backend
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # venv\Scripts\activate on Windows
+pip install -r requirements.txt
+python main.py
+```
 
-### POST /chat — Request Body
+### Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+## 🔗 API Documentation
+
+### `POST /chat`
+**Payload:**
 ```json
 {
-  "message": "How do I vote in India?",
+  "message": "Who is the Prime Minister?",
   "session_id": "optional-uuid"
 }
 ```
 
-### POST /chat — Response
+**Response:**
 ```json
 {
-  "reply": "## How to Vote in India...",
-  "session_id": "abc-123",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "model": "gpt-4o-mini"
+  "reply": "...",
+  "session_id": "...",
+  "timestamp": "..."
 }
 ```
 
 ---
 
-## 🧪 Sample Questions
-
-- "How do I vote in India?"
-- "Who can vote? What are the eligibility criteria?"
-- "Explain the complete election process step by step"
-- "What is the Election Commission of India?"
-- "How do I get a Voter ID card online?"
-- "What is NOTA?"
-- "Difference between Lok Sabha and Rajya Sabha elections?"
-
----
-
-## ☁️ Deployment
-
-### Option A — Render (Recommended, Free)
-
-1. Push code to GitHub
-2. Go to [render.com](https://render.com) → New Web Service
-3. Connect your repository
-4. Set:
-   - **Build Command:** `pip install -r requirements.txt`
-   - **Start Command:** `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT`
-   - **Environment Variables:** Add `OPENAI_API_KEY`
-
-### Option B — Railway
-
-1. Push to GitHub
-2. Go to [railway.app](https://railway.app) → New Project → GitHub Repo
-3. Add env vars in the Variables tab
-4. Set start command: `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT`
-
-### Option C — Docker
-
-```dockerfile
-FROM python:3.11-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-COPY . .
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-```bash
-docker build -t election-buddy .
-docker run -p 8000:8000 --env-file .env election-buddy
-```
-
----
-
-## 🔐 Security Notes
-
-- Never commit `.env` to git (it's in `.gitignore`)
-- OpenAI key stays on backend only
-- Add rate limiting for production (e.g., `slowapi`)
-- Restrict CORS origins in production
-
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| AI Model | OpenAI GPT-4o-mini |
-| Backend | Python + FastAPI + Uvicorn |
-| Frontend | HTML5 + CSS3 + Vanilla JS |
-| Fonts | Google Fonts (Inter, Outfit) |
+## 🎨 Design Philosophy
+- **Rich Aesthetics:** Dark mode by default with white/zinc accents.
+- **Glassmorphism:** Frosted glass headers and sidebars.
+- **Micro-animations:** Smooth transitions using Framer Motion.
+- **Clean UI:** No clutter, focus on readability and scannable content.
 
 ---
 
 ## 📄 License
-
-MIT — Free to use and modify.
+MIT

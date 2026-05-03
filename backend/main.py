@@ -119,15 +119,6 @@ science, tech - any topic relevant to Indian citizens.
 
 
 # ── Session Store ─────────────────────────────────────────────────────────────
-# Structure:
-# sessions[session_id] = {
-#   "id": str,
-#   "title": str,          # auto-generated from first message
-#   "created_at": str,
-#   "messages": [          # FULL history for display
-#     {"role": "user"|"assistant", "content": str, "timestamp": str}
-#   ]
-# }
 sessions: dict = {}
 
 
@@ -146,9 +137,7 @@ def create_session(first_message: str) -> dict:
 
 
 def get_ai_context(session: dict) -> list:
-    """Return only last AI_CONTEXT_PAIRS pairs for the AI call (memory management)."""
     all_msgs = session["messages"]
-    # Filter to user+assistant messages only, take last N pairs
     pairs = []
     i = 0
     while i < len(all_msgs):
@@ -162,7 +151,6 @@ def get_ai_context(session: dict) -> list:
                 i += 1
         else:
             i += 1
-    # Take last N pairs
     recent = pairs[-AI_CONTEXT_PAIRS:]
     context = []
     for pair in recent:
@@ -173,7 +161,6 @@ def get_ai_context(session: dict) -> list:
 
 
 def serialize_session(session: dict) -> dict:
-    """Return a safe JSON-serializable version of a session."""
     return {
         "id": session["id"],
         "title": session["title"],
@@ -184,10 +171,7 @@ def serialize_session(session: dict) -> dict:
 
 
 # ── Flask App ─────────────────────────────────────────────────────────────────
-# Point to the React production build folder
-FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "frontend-react", "dist"))
-
-# We set static_folder to the assets folder inside dist, or just dist
+FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
 app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path="")
 CORS(app)
 
@@ -196,18 +180,21 @@ CORS(app)
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def serve_spa(path):
-    # 1. Check if the file exists in the dist folder (e.g. assets/index.js)
+    # 1. If path is an API endpoint, Flask matches it before this catch-all
+    # 2. Check if the file exists in the dist folder (e.g. assets/index.js)
     if path != "" and os.path.exists(os.path.join(FRONTEND_DIR, path)):
         return send_from_directory(FRONTEND_DIR, path)
     
-    # 2. Otherwise, serve index.html (Standard SPA behavior)
-    # This ensures that /chat, /sessions etc. are NOT caught here 
-    # because Flask matches specific routes FIRST.
-    return send_from_directory(FRONTEND_DIR, "index.html")
+    # 3. Otherwise, serve index.html if it exists
+    if os.path.exists(os.path.join(FRONTEND_DIR, "index.html")):
+        return send_from_directory(FRONTEND_DIR, "index.html")
+    
+    # 4. Fallback for API status if frontend is not built
+    return jsonify({
+        "message": "Election Buddy AI API is online. Frontend not found in /frontend/dist.",
+        "endpoints": ["/chat", "/sessions", "/health"]
+    })
 
-@app.route("/favicon.ico")
-def favicon():
-    return send_from_directory(FRONTEND_DIR, "favicon.ico") if os.path.exists(os.path.join(FRONTEND_DIR, "favicon.ico")) else ("", 204)
 
 @app.route("/health", methods=["GET"])
 def health():
@@ -220,10 +207,8 @@ def health():
     })
 
 
-# ── GET /sessions — list all sessions (for sidebar) ──────────────────────────
 @app.route("/sessions", methods=["GET"])
 def list_sessions():
-    """Return all sessions sorted newest-first for the sidebar."""
     session_list = [
         {"id": s["id"], "title": s["title"], "created_at": s["created_at"],
          "message_count": len(s["messages"])}
@@ -233,7 +218,6 @@ def list_sessions():
     return jsonify({"sessions": session_list})
 
 
-# ── GET /session/<id> — load a specific session ───────────────────────────────
 @app.route("/session/<session_id>", methods=["GET"])
 def get_session(session_id):
     if session_id not in sessions:
@@ -241,7 +225,6 @@ def get_session(session_id):
     return jsonify(serialize_session(sessions[session_id]))
 
 
-# ── DELETE /session/<id> ──────────────────────────────────────────────────────
 @app.route("/session/<session_id>", methods=["DELETE"])
 def delete_session(session_id):
     if session_id in sessions:
@@ -250,7 +233,6 @@ def delete_session(session_id):
     return jsonify({"detail": "Session not found."}), 404
 
 
-# ── POST /chat — main chat endpoint ──────────────────────────────────────────
 @app.route("/chat", methods=["POST"])
 def chat():
     if not GROQ_API_KEY:
@@ -265,14 +247,12 @@ def chat():
     if len(user_message) > 2000:
         return jsonify({"detail": "Message too long (max 2000 chars)."}), 400
 
-    # Get or create session
     if not session_id or session_id not in sessions:
         session = create_session(user_message)
         session_id = session["id"]
     else:
         session = sessions[session_id]
 
-    # Build AI messages: system + last 3 context pairs + new message
     ai_context = get_ai_context(session)
     messages = [{"role": "system", "content": get_system_prompt()}]
     messages.extend(ai_context)
@@ -307,7 +287,6 @@ def chat():
         ai_reply = res_data["choices"][0]["message"]["content"].strip()
         now_str  = datetime.now(timezone.utc).isoformat()
 
-        # Append to full session history
         session["messages"].append({"role": "user",      "content": user_message, "timestamp": now_str})
         session["messages"].append({"role": "assistant", "content": ai_reply,     "timestamp": now_str})
 
@@ -337,4 +316,4 @@ def handle_exception(e):
 
 if __name__ == "__main__":
     logger.info(f"Election Buddy AI v2 starting on http://localhost:{PORT}")
-    app.run(host="0.0.0.0", port=PORT, debug=True)
+    app.run(host="0.0.0.0", port=PORT, debug=False)

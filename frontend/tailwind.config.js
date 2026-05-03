@@ -6,14 +6,16 @@ export default {
   ],
   theme: {
     extend: {
+      screens: {
+        'xs': '480px',
+      },
       colors: {
-        bg: "#0f0f11",
-        "bg-sidebar": "#161618",
-        accent: "#8b5cf6",
-        "accent-2": "#6d28d9",
+        bg: "#050505",
+        "bg-sidebar": "#0a0a0a",
       },
       fontFamily: {
-        outfit: ['Outfit', 'sans-serif'],
+        space: ['Space Grotesk', 'sans-serif'],
+        jakarta: ['Plus Jakarta Sans', 'sans-serif'],
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',

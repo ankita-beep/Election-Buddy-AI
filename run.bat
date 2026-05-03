@@ -23,11 +23,11 @@ if not exist "venv" (
 :: 3. Dependencies
 echo [INFO] Updating Python dependencies...
 venv\Scripts\python -m pip install -q --upgrade pip
-venv\Scripts\pip install -q -r requirements.txt
+venv\Scripts\pip install -q -r backend\requirements.txt
 
 :: 4. .env
 if not exist ".env" (
-    if exist ".env.example" copy .env.example .env >nul
+    if exist "backend\.env.example" copy backend\.env.example .env >nul
 )
 
 :: 5. Launch

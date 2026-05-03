@@ -31,7 +31,7 @@ function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 // ── Markdown Renderer ────────────────────────────────────────────────────────
 const renderMarkdown = (text) => {
@@ -81,13 +81,7 @@ function NavItem({ label, active, onClick, icon: Icon }) {
 
 // ── Main App ─────────────────────────────────────────────────────────────────
 
-export default function App() {
-  const [sessions, setSessions] = useState([]);
-  const [currentSessionId, setCurrentSessionId] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -173,22 +167,29 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-zinc-400 selection:bg-white/10 selection:text-white overflow-hidden font-jakarta">
+    <div className="min-h-[100dvh] bg-[#050505] text-zinc-400 selection:bg-white/10 selection:text-white overflow-hidden font-jakarta">
       {/* Subtle Grid */}
       <div className="fixed inset-0 grid-bg pointer-events-none opacity-[0.07] z-0" />
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 h-12 z-50 bg-[#050505]/80 backdrop-blur-md border-b border-white/[0.03] flex items-center justify-between px-4">
+      <header className="fixed top-0 left-0 right-0 h-14 z-50 bg-[#050505]/80 backdrop-blur-md border-b border-white/[0.03] flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="lg:hidden p-2 text-zinc-500 hover:text-white transition-all bg-white/[0.03] rounded border border-white/[0.05]"
+          >
+            {isSidebarOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
+          
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 bg-white rounded flex items-center justify-center">
               <Circle size={10} className="text-black fill-black" />
             </div>
-            <span className="text-xs font-bold text-white tracking-tighter uppercase font-space">
+            <span className="text-xs font-bold text-white tracking-tighter uppercase font-space hidden xs:block">
               ElectionBuddy
             </span>
           </div>
-          <div className="h-3 w-px bg-white/10 mx-1" />
+          <div className="h-3 w-px bg-white/10 mx-1 hidden xs:block" />
           <div className="flex items-center gap-2">
             <div className="w-1 h-1 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]" />
             <span className="text-[9px] font-bold uppercase text-zinc-500 tracking-widest font-space">
@@ -198,24 +199,40 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-4">
-          <nav className="hidden sm:flex items-center gap-5 text-[9px] font-bold uppercase tracking-widest font-space text-zinc-500">
+          <nav className="hidden md:flex items-center gap-5 text-[9px] font-bold uppercase tracking-widest font-space text-zinc-500">
             <span className="text-white border-b border-white py-1">Chat</span>
             <span className="hover:text-zinc-300 cursor-pointer transition-colors">Archive</span>
             <span className="hover:text-zinc-300 cursor-pointer transition-colors">Civic</span>
           </nav>
-          <div className="h-3 w-px bg-white/10" />
+          <div className="h-3 w-px bg-white/10 hidden sm:block" />
           <button onClick={startNewChat} className="p-1.5 text-zinc-500 hover:text-white transition-all bg-white/[0.03] rounded border border-white/[0.05]">
             <Plus size={14} />
           </button>
         </div>
       </header>
 
+      {/* Mobile Overlay */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsSidebarOpen(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[41] lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+
       {/* Sidebar */}
-      <aside className="fixed left-0 top-12 bottom-0 w-56 border-r border-white/[0.03] hidden lg:flex flex-col z-40 bg-[#050505]/50">
+      <aside className={cn(
+        "fixed left-0 top-14 bottom-0 w-64 border-r border-white/[0.03] z-[45] bg-[#050505] lg:bg-[#050505]/50 transition-transform duration-300 ease-in-out lg:translate-x-0 flex flex-col",
+        isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
         <div className="p-4 flex flex-col h-full">
           <div className="mb-8 px-2">
             <h3 className="text-[9px] font-bold text-zinc-600 uppercase tracking-[0.3em] font-space mb-4">Historical_Nodes</h3>
-            <div className="space-y-0.5">
+            <div className="space-y-0.5 overflow-y-auto max-h-[60vh] custom-scrollbar pr-2">
               {sessions.length === 0 ? (
                 <div className="py-4 text-[9px] text-zinc-700 italic px-2">No archived protocols</div>
               ) : (
@@ -224,7 +241,10 @@ export default function App() {
                     key={s.id}
                     label={s.title}
                     active={currentSessionId === s.id}
-                    onClick={() => loadSession(s.id)}
+                    onClick={() => {
+                      loadSession(s.id);
+                      setIsSidebarOpen(false);
+                    }}
                     icon={Hash}
                   />
                 ))
@@ -243,8 +263,11 @@ export default function App() {
               </div>
             </div>
             <button
-              onClick={startNewChat}
-              className="w-full py-2.5 bg-white text-black font-space text-[9px] font-bold uppercase tracking-[0.2em] hover:bg-zinc-200 transition-all rounded"
+              onClick={() => {
+                startNewChat();
+                setIsSidebarOpen(false);
+              }}
+              className="w-full py-2.5 bg-white text-black font-space text-[9px] font-bold uppercase tracking-[0.2em] hover:bg-zinc-200 transition-all rounded shadow-[0_0_15px_rgba(255,255,255,0.1)]"
             >
               New_Command
             </button>
@@ -253,16 +276,16 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="lg:ml-56 xl:mr-64 pt-12 h-screen flex flex-col relative z-10">
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 custom-scrollbar">
+      <main className="lg:ml-64 xl:mr-72 pt-14 h-[100dvh] flex flex-col relative z-10 transition-all duration-300">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8 custom-scrollbar">
           {messages.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center max-w-xl mx-auto space-y-6">
-              <div className="w-12 h-12 rounded-lg bg-white/[0.02] border border-white/[0.05] flex items-center justify-center">
+            <div className="h-full flex flex-col items-center justify-center text-center max-w-xl mx-auto space-y-6 p-4">
+              <div className="w-12 h-12 rounded-lg bg-white/[0.02] border border-white/[0.05] flex items-center justify-center shadow-inner">
                 <Terminal size={20} className="text-white/30" />
               </div>
-              <div className="space-y-1">
-                <h1 className="text-lg font-bold text-white font-space tracking-tight uppercase">ElectionBuddy_v2</h1>
-                <p className="text-[9px] text-zinc-600 font-space uppercase tracking-[0.3em]">Protocol active. Awaiting input.</p>
+              <div className="space-y-2">
+                <h1 className="text-xl md:text-2xl font-bold text-white font-space tracking-tight uppercase">ElectionBuddy_v2</h1>
+                <p className="text-[10px] text-zinc-600 font-space uppercase tracking-[0.3em]">Protocol active. Awaiting input.</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full pt-4">
@@ -275,10 +298,10 @@ export default function App() {
                   <button
                     key={i}
                     onClick={() => setInput(chip.q)}
-                    className="p-3 bg-white/[0.01] border border-white/[0.03] rounded hover:bg-white/[0.03] transition-all text-left group"
+                    className="p-4 bg-white/[0.01] border border-white/[0.03] rounded-lg hover:bg-white/[0.03] transition-all text-left group border-l-2 border-l-transparent hover:border-l-white/20"
                   >
                     <div className="text-[8px] font-bold font-space text-zinc-600 group-hover:text-zinc-400 tracking-[0.2em] uppercase mb-1">{chip.label}</div>
-                    <div className="text-[10px] text-zinc-500 group-hover:text-zinc-300">{chip.q}</div>
+                    <div className="text-[11px] text-zinc-500 group-hover:text-zinc-300 leading-tight">{chip.q}</div>
                   </button>
                 ))}
               </div>
@@ -291,26 +314,26 @@ export default function App() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   className={cn(
-                    "flex gap-4 items-start max-w-4xl",
-                    msg.role === 'user' ? "ml-auto flex-row-reverse" : ""
+                    "flex gap-3 md:gap-4 items-start max-w-4xl w-full mx-auto",
+                    msg.role === 'user' ? "flex-row-reverse" : ""
                   )}
                 >
                   <div className={cn(
-                    "w-7 h-7 rounded border flex items-center justify-center shrink-0 transition-all",
+                    "w-8 h-8 rounded border flex items-center justify-center shrink-0 transition-all",
                     msg.role === 'assistant'
-                      ? "bg-white border-white text-black"
+                      ? "bg-white border-white text-black shadow-[0_0_10px_rgba(255,255,255,0.2)]"
                       : "bg-white/[0.03] border-white/[0.05] text-zinc-400"
                   )}>
                     {msg.role === 'assistant' ? <Cpu size={14} /> : <User size={14} />}
                   </div>
                   <div className={cn(
-                    "flex-1 p-4 rounded-lg border relative min-w-[120px]",
+                    "flex-1 p-4 rounded-xl border relative min-w-[120px] shadow-sm",
                     msg.role === 'assistant'
-                      ? "bg-white/[0.02] border-white/[0.03]"
-                      : "bg-white/[0.05] border-white/[0.08] text-right"
+                      ? "bg-white/[0.02] border-white/[0.03] text-zinc-200"
+                      : "bg-white/[0.08] border-white/[0.1] text-white"
                   )}>
                     <div className={cn(
-                      "text-[12px] leading-relaxed tracking-tight text-zinc-200",
+                      "text-[13px] leading-relaxed tracking-tight",
                       msg.role === 'user' ? "text-right" : "text-left"
                     )}>
                       {msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content}
@@ -328,13 +351,13 @@ export default function App() {
 
               {isLoading && (
                 <div className="flex gap-4 items-center pl-1">
-                  <div className="w-7 h-7 rounded bg-white/[0.02] border border-white/[0.05] flex items-center justify-center">
-                    <Loader2 size={12} className="animate-spin text-zinc-600" />
+                  <div className="w-8 h-8 rounded border bg-white border-white text-black flex items-center justify-center shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+                    <Cpu size={14} className="animate-pulse" />
                   </div>
                   <div className="flex gap-1.5">
-                    <div className="w-1 h-1 rounded-full bg-zinc-700 animate-pulse" />
-                    <div className="w-1 h-1 rounded-full bg-zinc-700 animate-pulse delay-100" />
-                    <div className="w-1 h-1 rounded-full bg-zinc-700 animate-pulse delay-200" />
+                    <div className="w-1 h-1 rounded-full bg-zinc-500 animate-bounce" />
+                    <div className="w-1 h-1 rounded-full bg-zinc-500 animate-bounce [animation-delay:0.2s]" />
+                    <div className="w-1 h-1 rounded-full bg-zinc-500 animate-bounce [animation-delay:0.4s]" />
                   </div>
                 </div>
               )}
@@ -343,31 +366,31 @@ export default function App() {
         </div>
 
         {/* Minimal Input Bar */}
-        <div className="p-4 md:p-6 border-t border-white/[0.03] bg-[#050505]/80 backdrop-blur-md">
-          <div className="max-w-2xl mx-auto">
-            <div className="relative flex items-center bg-white/[0.02] border border-white/[0.05] rounded p-1 focus-within:border-white/20 transition-all duration-500">
+        <div className="p-4 md:p-6 border-t border-white/[0.03] bg-[#050505]/80 backdrop-blur-md sticky bottom-0">
+          <div className="max-w-3xl mx-auto">
+            <div className="relative flex items-center bg-white/[0.02] border border-white/[0.05] rounded-xl p-1 focus-within:border-white/20 transition-all duration-500 shadow-lg">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                 placeholder="Transmit command..."
-                className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-zinc-700 text-[11px] py-2 px-3 tracking-tight"
+                className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-zinc-700 text-[13px] py-3 px-4 tracking-tight"
               />
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || isLoading}
                 className={cn(
-                  "p-2 rounded transition-all duration-300 mr-1",
+                  "p-2.5 rounded-lg transition-all duration-300 mr-1",
                   input.trim() && !isLoading
-                    ? "text-white hover:bg-white/10"
+                    ? "text-white bg-white/10 hover:bg-white/20"
                     : "text-zinc-700 cursor-not-allowed"
                 )}
               >
-                {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
               </button>
             </div>
-            <div className="mt-2 text-center">
+            <div className="mt-3 text-center hidden sm:block">
               <span className="text-[7px] text-zinc-700 font-space font-bold uppercase tracking-[0.4em]">
                 Neural_Link · v2.6 · 2026_Cycle
               </span>
@@ -377,7 +400,7 @@ export default function App() {
       </main>
 
       {/* Right Info Panel */}
-      <aside className="hidden xl:flex w-64 fixed right-0 top-12 bottom-0 border-l border-white/[0.03] flex-col p-6 z-40 bg-[#050505]/50">
+      <aside className="hidden xl:flex w-72 fixed right-0 top-14 bottom-0 border-l border-white/[0.03] flex-col p-6 z-40 bg-[#050505]/50 overflow-y-auto">
         <div className="space-y-8">
           <section className="space-y-3">
             <h3 className="text-[9px] font-bold text-zinc-600 uppercase tracking-[0.3em] font-space flex items-center gap-2">
