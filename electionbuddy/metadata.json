@@ -1,6 +1,0 @@
-{
-  "name": "ElectionBuddy",
-  "description": "A high-tech distributed voting intelligence network and civic participation platform.",
-  "requestFramePermissions": ["microphone"],
-  "majorCapabilities": []
-}
