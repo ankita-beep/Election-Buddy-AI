@@ -5,7 +5,7 @@ import AISummary from './AISummary';
 import { Newspaper, TrendingUp, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://election-buddy-ai-backend.onrender.com";
 
 export default function Civic() {
   const [news, setNews] = useState([]);

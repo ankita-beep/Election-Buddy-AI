@@ -37,7 +37,7 @@ function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://election-buddy-ai-backend.onrender.com";
 
 // ── Markdown Renderer ────────────────────────────────────────────────────────
 const renderMarkdown = (text) => {
